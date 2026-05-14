@@ -449,11 +449,13 @@ async function dbxCreateFolder(path) {
     },
     body: JSON.stringify({ path, autorename: false })
   });
-  // 既に存在する場合（409）は無視して続行
 }
 
 async function dbxUpload(path, content, mode = 'add', isRetry = false) {
   const token = await getAccessToken();
+  // トークンが取得できない場合は再認証へ
+  if (!token) throw new Error('__REAUTH__');
+
   const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
@@ -463,15 +465,20 @@ async function dbxUpload(path, content, mode = 'add', isRetry = false) {
     },
     body: new TextEncoder().encode(content)
   });
+
+  if (resp.status === 401) { setToken(null); throw new Error('__REAUTH__'); }
+
   if (!resp.ok) {
+    // フォルダが存在しない可能性 → 1回だけ作成してリトライ
     if (!isRetry) {
-      // フォルダが存在しない可能性 → 作成して1回だけ再試行
       const folder = path.substring(0, path.lastIndexOf('/'));
       await dbxCreateFolder(folder);
       return dbxUpload(path, content, mode, true);
     }
+    // リトライも失敗 → 詳細なDropboxエラーを表示
     const e = await resp.json().catch(() => ({}));
-    throw new Error(e.error_summary || 'アップロード失敗');
+    const detail = e.error_summary || JSON.stringify(e).slice(0, 120);
+    throw new Error(`[${resp.status}] ${detail}`);
   }
 }
 
@@ -622,8 +629,8 @@ async function saveNote() {
     setTimeout(() => setStatus(''), 2500);
 
   } catch (e) {
-    if (!getToken()) {
-      setStatus('再認証が必要です', 'err');
+    if (e.message === '__REAUTH__' || !getToken()) {
+      setStatus('認証が切れました。再接続してください', 'err');
       setTimeout(() => showScreen('auth'), 1500);
     } else {
       setStatus('エラー: ' + e.message, 'err');
