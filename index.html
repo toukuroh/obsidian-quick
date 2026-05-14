@@ -465,8 +465,9 @@ async function dbxDownload(path) {
       'Dropbox-API-Arg': dbxArg({ path })
     }
   });
-  if (resp.status === 409) return null;
-  if (!resp.ok) throw new Error('ダウンロード失敗');
+  // ファイルが存在しない場合（409/404）も、その他のAPIエラーも
+  // null を返して「新規ファイルとして作成」に進む
+  if (!resp.ok) return null;
   return resp.text();
 }
 
