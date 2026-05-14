@@ -1,4 +1,4 @@
-const CACHE = 'obsq-v1';
+const CACHE = 'obsq-v3';
 const ASSETS = ['./'];
 
 self.addEventListener('install', e => {
