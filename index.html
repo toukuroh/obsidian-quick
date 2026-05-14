@@ -453,7 +453,6 @@ async function dbxCreateFolder(path) {
 
 async function dbxUpload(path, content, mode = 'add', isRetry = false) {
   const token = await getAccessToken();
-  // トークンが取得できない場合は再認証へ
   if (!token) throw new Error('__REAUTH__');
 
   const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
@@ -463,22 +462,23 @@ async function dbxUpload(path, content, mode = 'add', isRetry = false) {
       'Dropbox-API-Arg': dbxArg({ path, mode, autorename: true }),
       'Content-Type': 'application/octet-stream'
     },
-    body: new TextEncoder().encode(content)
+    body: new Blob([content], { type: 'text/plain; charset=utf-8' })
   });
 
   if (resp.status === 401) { setToken(null); throw new Error('__REAUTH__'); }
 
   if (!resp.ok) {
-    // フォルダが存在しない可能性 → 1回だけ作成してリトライ
-    if (!isRetry) {
+    // 409 = パスが見つからない → フォルダ作成してリトライ
+    if (resp.status === 409 && !isRetry) {
       const folder = path.substring(0, path.lastIndexOf('/'));
       await dbxCreateFolder(folder);
       return dbxUpload(path, content, mode, true);
     }
-    // リトライも失敗 → 詳細なDropboxエラーを表示
-    const e = await resp.json().catch(() => ({}));
-    const detail = e.error_summary || JSON.stringify(e).slice(0, 120);
-    throw new Error(`[${resp.status}] ${detail}`);
+    // 生レスポンスをそのまま表示して原因を特定
+    const raw = await resp.text().catch(() => '');
+    let msg = raw.slice(0, 200);
+    try { const j = JSON.parse(raw); msg = j.error_summary || msg; } catch {}
+    throw new Error(`[${resp.status}] ${msg || '(empty)'}`);
   }
 }
 
