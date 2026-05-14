@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ObsidianQuick</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e1e2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ObsidianQ">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screen { display: none; flex-direction: column; height: 100%; padding: 16px; gap: 12px; }
+    .screen.active { display: flex; }
+
+    /* ---- Header ---- */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    h1 { font-size: 18px; color: #89b4fa; display: flex; align-items: center; gap: 6px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .mode-badge {
+      font-size: 12px; color: #6c7086;
+      background: #313244; padding: 4px 10px; border-radius: 20px;
+    }
+    .icon-btn {
+      background: none; border: none; color: #a6adc8;
+      font-size: 22px; cursor: pointer; padding: 4px;
+      -webkit-tap-highlight-color: transparent; line-height: 1;
+    }
+
+    /* ---- Textarea + Voice area ---- */
+    .input-wrap {
+      flex: 1; display: flex; flex-direction: column;
+      background: #313244; border: 2px solid #45475a;
+      border-radius: 12px; transition: border-color 0.2s; overflow: hidden;
+    }
+    .input-wrap:focus-within { border-color: #89b4fa; }
+
+    textarea {
+      flex: 1; background: transparent; border: none;
+      color: #cdd6f4; font-size: 18px; line-height: 1.7;
+      padding: 16px; resize: none; outline: none;
+    }
+    textarea::placeholder { color: #6c7086; }
+
+    /* ---- Mic button (inside input box) ---- */
+    .mic-row {
+      display: flex; justify-content: flex-end;
+      padding: 8px 12px 10px; gap: 8px; align-items: center;
+    }
+    .mic-label { font-size: 12px; color: #6c7086; }
+
+    .mic-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      background: #45475a; color: #cdd6f4;
+    }
+    .mic-btn.listening {
+      background: #f38ba8; color: #1e1e2e;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .mic-btn.unsupported { opacity: 0.3; cursor: not-allowed; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243,139,168,0.4); }
+      50%       { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(243,139,168,0); }
+    }
+
+    /* ---- Status ---- */
+    .status {
+      text-align: center; font-size: 14px;
+      min-height: 20px; flex-shrink: 0; transition: color 0.2s;
+    }
+    .status.ok  { color: #a6e3a1; }
+    .status.err { color: #f38ba8; }
+    .status.inf { color: #89dceb; }
+
+    /* ---- Save button ---- */
+    .save-btn {
+      background: #89b4fa; color: #1e1e2e;
+      border: none; border-radius: 12px;
+      font-size: 18px; font-weight: 700; padding: 16px;
+      cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .save-btn:active:not(:disabled) { transform: scale(0.97); background: #74c7ec; }
+    .save-btn:disabled { background: #45475a; color: #6c7086; }
+
+    /* ---- Generic buttons ---- */
+    .btn {
+      border: none; border-radius: 10px; font-size: 16px;
+      font-weight: 600; padding: 14px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    }
+    .btn-primary   { background: #89b4fa; color: #1e1e2e; }
+    .btn-secondary { background: #313244; color: #cdd6f4; }
+    .btn-danger    { background: #f38ba8; color: #1e1e2e; }
+
+    /* ---- History ---- */
+    .history-wrap { flex-shrink: 0; display: none; }
+    .history-list {
+      display: flex; flex-direction: column; gap: 5px;
+      max-height: 100px; overflow-y: auto;
+    }
+    .history-item {
+      background: #313244; border-radius: 8px; padding: 7px 12px;
+      font-size: 13px; color: #a6adc8; display: flex;
+      justify-content: space-between; gap: 8px; overflow: hidden;
+    }
+    .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-time { color: #6c7086; white-space: nowrap; font-size: 12px; }
+
+    hr.divider { border: none; border-top: 1px solid #313244; flex-shrink: 0; }
+
+    /* ---- Auth Screen ---- */
+    #auth-screen { align-items: center; justify-content: center; text-align: center; }
+    #auth-screen .icon-big { font-size: 64px; margin-bottom: 8px; }
+    #auth-screen h1 { justify-content: center; }
+    #auth-screen .auth-desc { color: #a6adc8; line-height: 1.7; }
+    #auth-screen .btn { width: 100%; max-width: 320px; }
+
+    /* ---- Settings Screen ---- */
+    #settings-screen { overflow-y: auto; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    label { font-size: 14px; color: #a6adc8; }
+    input, select {
+      background: #313244; border: 2px solid #45475a; border-radius: 8px;
+      color: #cdd6f4; font-size: 16px; padding: 12px; outline: none;
+      transition: border-color 0.2s; width: 100%;
+    }
+    input:focus, select:focus { border-color: #89b4fa; }
+    .help-text { font-size: 12px; color: #6c7086; }
+    .section-title {
+      font-size: 11px; color: #6c7086; text-transform: uppercase;
+      letter-spacing: 0.08em; flex-shrink: 0; margin-top: 4px;
+    }
+    .auth-status-row { font-size: 14px; color: #a6adc8; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ===== Main Screen ===== -->
+<div id="main-screen" class="screen">
+  <div class="header">
+    <h1>📝 ObsidianQuick</h1>
+    <div class="header-right">
+      <span id="mode-badge" class="mode-badge"></span>
+      <button class="icon-btn" onclick="showScreen('settings')" title="設定">⚙️</button>
+    </div>
+  </div>
+
+  <div class="input-wrap">
+    <textarea id="memo-input"
+      placeholder="メモを入力、またはマイクをタップ…"
+      rows="6"></textarea>
+
+    <div class="mic-row">
+      <span id="mic-label" class="mic-label"></span>
+      <button id="mic-btn" class="mic-btn" onclick="toggleVoice()" title="音声入力">🎤</button>
+    </div>
+  </div>
+
+  <div id="history-wrap" class="history-wrap">
+    <hr class="divider" style="margin-bottom:8px">
+    <div id="history-list" class="history-list"></div>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <button id="save-btn" class="save-btn" onclick="saveNote()">
+    保存 → Obsidian
+  </button>
+</div>
+
+<!-- ===== Auth Screen ===== -->
+<div id="auth-screen" class="screen">
+  <div class="icon-big">🗄️</div>
+  <h1>Dropboxに接続</h1>
+  <p class="auth-desc" style="margin:8px 0 20px">
+    ObsidianのVaultが保存されている<br>Dropboxアカウントに接続します
+  </p>
+  <button class="btn btn-primary" onclick="startAuth()">Dropboxで認証する</button>
+  <div style="height:8px"></div>
+  <button class="btn btn-secondary" onclick="showScreen('settings')">設定を変更</button>
+</div>
+
+<!-- ===== Settings Screen ===== -->
+<div id="settings-screen" class="screen">
+  <div class="header">
+    <h1>⚙️ 設定</h1>
+    <button class="icon-btn" onclick="goBack()">✕</button>
+  </div>
+
+  <p class="section-title">Dropbox App</p>
+
+  <div class="form-group">
+    <label>App Key</label>
+    <input type="text" id="app-key-input" placeholder="xxxxxxxxxxxx"
+      autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    <span class="help-text">
+      <a href="https://www.dropbox.com/developers/apps" target="_blank"
+        style="color:#89b4fa">Dropbox App Console</a> で取得したApp Key
+    </span>
+  </div>
+
+  <hr class="divider">
+  <p class="section-title">保存先</p>
+
+  <div class="form-group">
+    <label>保存モード</label>
+    <select id="save-mode-select">
+      <option value="inbox">Inbox（メモごとに新規ファイル）</option>
+      <option value="daily">Daily Note（日付ファイルに追記）</option>
+    </select>
+  </div>
+
+  <div id="inbox-group" class="form-group">
+    <label>Inboxフォルダ（Dropbox内パス）</label>
+    <input type="text" id="inbox-path-input" placeholder="/ObsidianVault/MyVault/Inbox">
+    <span class="help-text">メモを保存するフォルダ</span>
+  </div>
+
+  <div id="daily-group" class="form-group">
+    <label>Daily Noteフォルダ（Dropbox内パス）</label>
+    <input type="text" id="daily-path-input" placeholder="/ObsidianVault/MyVault/Daily">
+    <span class="help-text">YYYY-MM-DD.md に追記します</span>
+  </div>
+
+  <div class="form-group">
+    <label>音声入力の言語</label>
+    <select id="lang-select">
+      <option value="ja-JP">日本語</option>
+      <option value="en-US">English</option>
+    </select>
+  </div>
+
+  <button class="btn btn-primary" onclick="saveSettings()">設定を保存</button>
+
+  <hr class="divider">
+  <p class="section-title">認証状態</p>
+
+  <div id="auth-status-text" class="auth-status-row"></div>
+  <button id="reconnect-btn" class="btn btn-secondary"
+    style="display:none" onclick="startAuth()">Dropboxに再接続</button>
+  <button id="disconnect-btn" class="btn btn-danger"
+    style="display:none" onclick="disconnect()">接続を解除</button>
+</div>
+
+<script>
+'use strict';
+
+const CONFIG_KEY  = 'obsq_config';
+const TOKEN_KEY   = 'obsq_token';
+const HISTORY_KEY = 'obsq_history';
+
+// ---------- Storage ----------
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; }
+  catch { return {}; }
+}
+function setConfig(c) { localStorage.setItem(CONFIG_KEY, JSON.stringify(c)); }
+
+function getToken() {
+  try { return JSON.parse(localStorage.getItem(TOKEN_KEY)) || null; }
+  catch { return null; }
+}
+function setToken(t) { localStorage.setItem(TOKEN_KEY, JSON.stringify(t)); }
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+function pushHistory(text) {
+  const h = getHistory();
+  h.unshift({ text: text.slice(0, 60), time: fmtTime(new Date()) });
+  if (h.length > 5) h.pop();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+
+// ---------- Date / Time ----------
+
+function fmtDate(d = new Date()) {
+  return d.getFullYear()
+    + '-' + String(d.getMonth() + 1).padStart(2, '0')
+    + '-' + String(d.getDate()).padStart(2, '0');
+}
+function fmtTime(d = new Date()) {
+  return String(d.getHours()).padStart(2, '0')
+    + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// ---------- PKCE ----------
+
+async function buildPKCE() {
+  const buf = new Uint8Array(32);
+  crypto.getRandomValues(buf);
+  const verifier = btoa(String.fromCharCode(...buf))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const enc = new TextEncoder().encode(verifier);
+  const dig = await crypto.subtle.digest('SHA-256', enc);
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(dig)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return { verifier, challenge };
+}
+
+// ---------- Auth ----------
+
+async function startAuth() {
+  const cfg = getConfig();
+  if (!cfg.appKey) { alert('App Key を設定してください'); showScreen('settings'); return; }
+
+  const { verifier, challenge } = await buildPKCE();
+  sessionStorage.setItem('pkce_v', verifier);
+
+  const redirect = location.origin + location.pathname;
+  const p = new URLSearchParams({
+    client_id: cfg.appKey,
+    response_type: 'code',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    redirect_uri: redirect,
+    token_access_type: 'offline'
+  });
+  location.href = 'https://www.dropbox.com/oauth2/authorize?' + p;
+}
+
+async function handleCallback(code) {
+  const verifier = sessionStorage.getItem('pkce_v');
+  if (!verifier) { setStatus('認証エラー: セッション切れ', 'err'); showScreen('auth'); return; }
+
+  const cfg = getConfig();
+  const redirect = location.origin + location.pathname;
+
+  const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      grant_type: 'authorization_code',
+      client_id: cfg.appKey,
+      code_verifier: verifier,
+      redirect_uri: redirect
+    })
+  });
+  const data = await resp.json();
+
+  if (data.access_token) {
+    setToken({
+      access:  data.access_token,
+      refresh: data.refresh_token,
+      expires: Date.now() + (data.expires_in - 60) * 1000
+    });
+    sessionStorage.removeItem('pkce_v');
+    history.replaceState({}, '', location.pathname);
+    init();
+  } else {
+    setStatus('認証失敗: ' + (data.error_description || data.error), 'err');
+    showScreen('auth');
+  }
+}
+
+async function getAccessToken() {
+  let tok = getToken();
+  if (!tok) return null;
+  if (Date.now() < tok.expires) return tok.access;
+
+  const cfg = getConfig();
+  const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      refresh_token: tok.refresh,
+      grant_type: 'refresh_token',
+      client_id: cfg.appKey
+    })
+  });
+  const data = await resp.json();
+  if (data.access_token) {
+    tok.access  = data.access_token;
+    tok.expires = Date.now() + (data.expires_in - 60) * 1000;
+    setToken(tok);
+    return tok.access;
+  }
+  setToken(null);
+  return null;
+}
+
+function disconnect() {
+  if (!confirm('Dropboxとの接続を解除しますか？')) return;
+  localStorage.removeItem(TOKEN_KEY);
+  showScreen('auth');
+}
+
+// ---------- Dropbox API ----------
+
+async function dbxUpload(path, content, mode = 'add') {
+  const token = await getAccessToken();
+  const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Dropbox-API-Arg': JSON.stringify({ path, mode, autorename: false }),
+      'Content-Type': 'application/octet-stream'
+    },
+    body: new TextEncoder().encode(content)
+  });
+  if (!resp.ok) {
+    const e = await resp.json().catch(() => ({}));
+    throw new Error(e.error_summary || 'アップロード失敗');
+  }
+}
+
+async function dbxDownload(path) {
+  const token = await getAccessToken();
+  const resp = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Dropbox-API-Arg': JSON.stringify({ path })
+    }
+  });
+  if (resp.status === 409) return null;
+  if (!resp.ok) throw new Error('ダウンロード失敗');
+  return resp.text();
+}
+
+// ---------- Voice Input ----------
+
+let recognition = null;
+let isListening = false;
+
+function initVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = document.getElementById('mic-btn');
+  const lbl = document.getElementById('mic-label');
+
+  if (!SR) {
+    btn.classList.add('unsupported');
+    btn.title = 'このブラウザは音声入力に対応していません（Chrome推奨）';
+    lbl.textContent = '音声入力非対応';
+    return;
+  }
+
+  const cfg = getConfig();
+  recognition = new SR();
+  recognition.lang        = cfg.voiceLang || 'ja-JP';
+  recognition.interimResults = true;
+  recognition.continuous  = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isListening = true;
+    btn.classList.add('listening');
+    lbl.textContent = '聞いています…';
+  };
+
+  recognition.onresult = (e) => {
+    const input = document.getElementById('memo-input');
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    // Show interim in grey via placeholder trick or just append
+    if (final) {
+      input.value = (input.value + ' ' + final).trim();
+    }
+    if (interim) {
+      lbl.textContent = '「' + interim + '」';
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    btn.classList.remove('listening');
+    lbl.textContent = '';
+    const text = document.getElementById('memo-input').value.trim();
+    if (text) {
+      // Auto-save after a short moment so user can see the text
+      setTimeout(() => saveNote(), 800);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    btn.classList.remove('listening');
+    lbl.textContent = '';
+    if (e.error !== 'no-speech') {
+      setStatus('音声エラー: ' + e.error, 'err');
+    }
+  };
+}
+
+function toggleVoice() {
+  const btn = document.getElementById('mic-btn');
+  if (btn.classList.contains('unsupported')) return;
+
+  if (isListening) {
+    recognition.stop();
+  } else {
+    const cfg = getConfig();
+    if (recognition) {
+      recognition.lang = cfg.voiceLang || 'ja-JP';
+    } else {
+      initVoice();
+    }
+    document.getElementById('memo-input').value = '';
+    try { recognition.start(); }
+    catch (e) { setStatus('マイク起動失敗: ' + e.message, 'err'); }
+  }
+}
+
+// ---------- Save ----------
+
+async function saveNote() {
+  const input = document.getElementById('memo-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  setStatus('保存中…', 'inf');
+
+  try {
+    const cfg  = getConfig();
+    const mode = cfg.saveMode || 'inbox';
+    const now  = new Date();
+    const date = fmtDate(now);
+    const time = fmtTime(now);
+
+    if (mode === 'daily') {
+      const folder = (cfg.dailyPath || '/ObsidianVault/MyVault/Daily').replace(/\/$/, '');
+      const path   = folder + '/' + date + '.md';
+      const existing = await dbxDownload(path);
+      const body = existing === null
+        ? '# ' + date + '\n\n- ' + time + ' ' + text + '\n'
+        : existing.replace(/\n$/, '') + '\n- ' + time + ' ' + text + '\n';
+      await dbxUpload(path, body, 'overwrite');
+    } else {
+      const folder = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
+      const safe   = text.slice(0, 40).replace(/[<>:"/\\|?*\n\r]/g, ' ').trim();
+      const path   = folder + '/' + date + ' ' + time.replace(':', '') + ' ' + safe + '.md';
+      const body   = text + '\n\n---\n*' + date + ' ' + time + '*\n';
+      await dbxUpload(path, body, 'add');
+    }
+
+    pushHistory(text);
+    input.value = '';
+    renderHistory();
+    setStatus('✓ 保存しました！', 'ok');
+    setTimeout(() => setStatus(''), 2500);
+
+  } catch (e) {
+    if (!getToken()) {
+      setStatus('再認証が必要です', 'err');
+      setTimeout(() => showScreen('auth'), 1500);
+    } else {
+      setStatus('エラー: ' + e.message, 'err');
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---------- UI ----------
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  if (name === 'settings') loadSettings();
+  if (name === 'main') {
+    updateModeBadge();
+    renderHistory();
+    initVoice();
+    setTimeout(() => document.getElementById('memo-input').focus(), 100);
+  }
+}
+
+function goBack() { showScreen(getToken() ? 'main' : 'auth'); }
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className   = 'status' + (type ? ' ' + type : '');
+}
+
+function updateModeBadge() {
+  const cfg = getConfig();
+  document.getElementById('mode-badge').textContent =
+    cfg.saveMode === 'daily' ? '📅 Daily' : '📥 Inbox';
+}
+
+function renderHistory() {
+  const h    = getHistory();
+  const wrap = document.getElementById('history-wrap');
+  const list = document.getElementById('history-list');
+  if (!h.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  list.innerHTML = h.map(it =>
+    '<div class="history-item">' +
+    '<span class="history-text">' + escHtml(it.text) + '</span>' +
+    '<span class="history-time">' + escHtml(it.time) + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function loadSettings() {
+  const cfg = getConfig();
+  document.getElementById('app-key-input').value    = cfg.appKey    || '';
+  document.getElementById('save-mode-select').value  = cfg.saveMode  || 'inbox';
+  document.getElementById('inbox-path-input').value  = cfg.inboxPath || '/ObsidianVault/MyVault/Inbox';
+  document.getElementById('daily-path-input').value  = cfg.dailyPath || '/ObsidianVault/MyVault/Daily';
+  document.getElementById('lang-select').value       = cfg.voiceLang || 'ja-JP';
+  togglePathGroups(cfg.saveMode || 'inbox');
+  document.getElementById('save-mode-select').onchange = e => togglePathGroups(e.target.value);
+
+  const tok  = getToken();
+  const text = document.getElementById('auth-status-text');
+  const rBtn = document.getElementById('reconnect-btn');
+  const dBtn = document.getElementById('disconnect-btn');
+  if (tok) {
+    text.textContent = '✓ Dropbox接続済み';
+    text.style.color = '#a6e3a1';
+    rBtn.style.display = '';
+    dBtn.style.display = '';
+  } else {
+    text.textContent = '未接続';
+    text.style.color = '#f38ba8';
+    rBtn.style.display = '';
+    dBtn.style.display = 'none';
+  }
+}
+
+function togglePathGroups(mode) {
+  document.getElementById('inbox-group').style.display = mode === 'inbox' ? '' : 'none';
+  document.getElementById('daily-group').style.display = mode === 'daily' ? '' : 'none';
+}
+
+function saveSettings() {
+  const cfg = {
+    appKey:    document.getElementById('app-key-input').value.trim(),
+    saveMode:  document.getElementById('save-mode-select').value,
+    inboxPath: document.getElementById('inbox-path-input').value.trim() || '/ObsidianVault/MyVault/Inbox',
+    dailyPath: document.getElementById('daily-path-input').value.trim() || '/ObsidianVault/MyVault/Daily',
+    voiceLang: document.getElementById('lang-select').value,
+  };
+  setConfig(cfg);
+  if (!cfg.appKey) { alert('App Key を入力してください'); return; }
+  showScreen(getToken() ? 'main' : 'auth');
+}
+
+// Ctrl+Enter to save
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveNote();
+});
+
+// ---------- Boot ----------
+
+async function init() {
+  const params = new URLSearchParams(location.search);
+  const code   = params.get('code');
+  if (code) { await handleCallback(code); return; }
+
+  const cfg = getConfig();
+  const tok = getToken();
+
+  if (!cfg.appKey) { showScreen('settings'); return; }
+  if (!tok)        { showScreen('auth');     return; }
+
+  showScreen('main');
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+init();
+</script>
+</body>
+</html>
