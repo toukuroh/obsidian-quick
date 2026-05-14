@@ -1,3 +1,5 @@
+$ cat "E:\AI\obsidian-quick-capture\index.html"
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -560,8 +562,7 @@ async function saveNote() {
       await dbxUpload(path, body, 'overwrite');
     } else {
       const folder = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
-      const safe   = text.slice(0, 40).replace(/[<>:"/\\|?*\n\r]/g, ' ').trim();
-      const path   = folder + '/' + date + ' ' + time.replace(':', '') + ' ' + safe + '.md';
+      const path   = folder + '/' + date + '-' + time.replace(':', '') + '.md';
       const body   = text + '\n\n---\n*' + date + ' ' + time + '*\n';
       await dbxUpload(path, body, 'add');
     }
