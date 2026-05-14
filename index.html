@@ -1,5 +1,3 @@
-$ cat "E:\AI\obsidian-quick-capture\index.html"
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -7,17 +5,18 @@ $ cat "E:\AI\obsidian-quick-capture\index.html"
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>ObsidianQuick</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e1e2e">
+  <meta name="theme-color" content="#f2f2f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ObsidianQ">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #1e1e2e;
-      color: #cdd6f4;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+                   'Helvetica Neue', sans-serif;
+      background: #f2f2f7;
+      color: #000000;
       height: 100dvh;
       display: flex;
       flex-direction: column;
@@ -33,15 +32,19 @@ $ cat "E:\AI\obsidian-quick-capture\index.html"
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      padding: 4px 0;
     }
-    h1 { font-size: 18px; color: #89b4fa; display: flex; align-items: center; gap: 6px; }
+    h1 {
+      font-size: 20px; font-weight: 700; color: #000;
+      display: flex; align-items: center; gap: 6px;
+    }
     .header-right { display: flex; align-items: center; gap: 8px; }
     .mode-badge {
-      font-size: 12px; color: #6c7086;
-      background: #313244; padding: 4px 10px; border-radius: 20px;
+      font-size: 12px; color: #8e8e93; font-weight: 500;
+      background: #e5e5ea; padding: 4px 10px; border-radius: 20px;
     }
     .icon-btn {
-      background: none; border: none; color: #a6adc8;
+      background: none; border: none; color: #007aff;
       font-size: 22px; cursor: pointer; padding: 4px;
       -webkit-tap-highlight-color: transparent; line-height: 1;
     }
@@ -49,73 +52,82 @@ $ cat "E:\AI\obsidian-quick-capture\index.html"
     /* ---- Textarea + Voice area ---- */
     .input-wrap {
       flex: 1; display: flex; flex-direction: column;
-      background: #313244; border: 2px solid #45475a;
-      border-radius: 12px; transition: border-color 0.2s; overflow: hidden;
+      background: #ffffff; border: none;
+      border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04);
+      overflow: hidden;
     }
-    .input-wrap:focus-within { border-color: #89b4fa; }
 
     textarea {
       flex: 1; background: transparent; border: none;
-      color: #cdd6f4; font-size: 18px; line-height: 1.7;
+      color: #000000; font-size: 18px; line-height: 1.7;
       padding: 16px; resize: none; outline: none;
+      font-family: inherit;
     }
-    textarea::placeholder { color: #6c7086; }
+    textarea::placeholder { color: #c7c7cc; }
 
-    /* ---- Mic button (inside input box) ---- */
+    /* ---- Mic button ---- */
     .mic-row {
       display: flex; justify-content: flex-end;
-      padding: 8px 12px 10px; gap: 8px; align-items: center;
+      padding: 8px 14px 14px; gap: 8px; align-items: center;
+      border-top: 0.5px solid #e5e5ea;
     }
-    .mic-label { font-size: 12px; color: #6c7086; }
+    .mic-label { font-size: 12px; color: #8e8e93; }
 
     .mic-btn {
-      width: 48px; height: 48px; border-radius: 50%;
+      width: 62px; height: 62px; border-radius: 50%;
       border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px; transition: all 0.2s;
+      font-size: 26px; transition: all 0.2s;
       -webkit-tap-highlight-color: transparent;
-      background: #45475a; color: #cdd6f4;
+      background: #e5e5ea; color: #3c3c43;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     .mic-btn.listening {
-      background: #f38ba8; color: #1e1e2e;
+      background: #ff3b30; color: #ffffff;
+      box-shadow: 0 2px 12px rgba(255,59,48,0.4);
       animation: pulse 1s ease-in-out infinite;
     }
     .mic-btn.unsupported { opacity: 0.3; cursor: not-allowed; }
 
     @keyframes pulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243,139,168,0.4); }
-      50%       { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(243,139,168,0); }
+      0%, 100% { transform: scale(1);    box-shadow: 0 2px 12px rgba(255,59,48,0.4); }
+      50%       { transform: scale(1.06); box-shadow: 0 2px 20px rgba(255,59,48,0.15); }
     }
 
     /* ---- Status ---- */
     .status {
       text-align: center; font-size: 14px;
-      min-height: 20px; flex-shrink: 0; transition: color 0.2s;
+      min-height: 20px; flex-shrink: 0;
     }
-    .status.ok  { color: #a6e3a1; }
-    .status.err { color: #f38ba8; }
-    .status.inf { color: #89dceb; }
+    .status.ok  { color: #34c759; }
+    .status.err { color: #ff3b30; }
+    .status.inf { color: #007aff; }
 
     /* ---- Save button ---- */
     .save-btn {
-      background: #89b4fa; color: #1e1e2e;
-      border: none; border-radius: 12px;
-      font-size: 18px; font-weight: 700; padding: 16px;
+      background: #007aff; color: #ffffff;
+      border: none; border-radius: 14px;
+      font-size: 18px; font-weight: 600; padding: 16px;
       cursor: pointer; flex-shrink: 0; transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+      box-shadow: 0 2px 10px rgba(0,122,255,0.3);
+      letter-spacing: -0.01em;
     }
-    .save-btn:active:not(:disabled) { transform: scale(0.97); background: #74c7ec; }
-    .save-btn:disabled { background: #45475a; color: #6c7086; }
+    .save-btn:active:not(:disabled) { transform: scale(0.97); opacity: 0.9; }
+    .save-btn:disabled { background: #c7c7cc; box-shadow: none; }
 
     /* ---- Generic buttons ---- */
     .btn {
-      border: none; border-radius: 10px; font-size: 16px;
+      border: none; border-radius: 12px; font-size: 16px;
       font-weight: 600; padding: 14px; cursor: pointer;
       -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+      font-family: inherit;
     }
-    .btn-primary   { background: #89b4fa; color: #1e1e2e; }
-    .btn-secondary { background: #313244; color: #cdd6f4; }
-    .btn-danger    { background: #f38ba8; color: #1e1e2e; }
+    .btn-primary   { background: #007aff; color: #ffffff; box-shadow: 0 2px 8px rgba(0,122,255,0.25); }
+    .btn-secondary { background: #e5e5ea; color: #3c3c43; }
+    .btn-danger    { background: #ff3b30; color: #ffffff; }
 
     /* ---- History ---- */
     .history-wrap { flex-shrink: 0; display: none; }
@@ -124,38 +136,42 @@ $ cat "E:\AI\obsidian-quick-capture\index.html"
       max-height: 100px; overflow-y: auto;
     }
     .history-item {
-      background: #313244; border-radius: 8px; padding: 7px 12px;
-      font-size: 13px; color: #a6adc8; display: flex;
+      background: #ffffff; border-radius: 10px; padding: 8px 12px;
+      font-size: 13px; color: #3c3c43; display: flex;
       justify-content: space-between; gap: 8px; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .history-time { color: #6c7086; white-space: nowrap; font-size: 12px; }
+    .history-time { color: #8e8e93; white-space: nowrap; font-size: 12px; }
 
-    hr.divider { border: none; border-top: 1px solid #313244; flex-shrink: 0; }
+    hr.divider { border: none; border-top: 0.5px solid #e5e5ea; flex-shrink: 0; }
 
     /* ---- Auth Screen ---- */
     #auth-screen { align-items: center; justify-content: center; text-align: center; }
     #auth-screen .icon-big { font-size: 64px; margin-bottom: 8px; }
     #auth-screen h1 { justify-content: center; }
-    #auth-screen .auth-desc { color: #a6adc8; line-height: 1.7; }
+    #auth-screen .auth-desc { color: #8e8e93; line-height: 1.7; }
     #auth-screen .btn { width: 100%; max-width: 320px; }
 
     /* ---- Settings Screen ---- */
     #settings-screen { overflow-y: auto; }
     .form-group { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    label { font-size: 14px; color: #a6adc8; }
+    label { font-size: 14px; color: #8e8e93; font-weight: 500; }
     input, select {
-      background: #313244; border: 2px solid #45475a; border-radius: 8px;
-      color: #cdd6f4; font-size: 16px; padding: 12px; outline: none;
+      background: #ffffff; border: 1px solid #e5e5ea; border-radius: 10px;
+      color: #000000; font-size: 16px; padding: 12px; outline: none;
       transition: border-color 0.2s; width: 100%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      font-family: inherit;
     }
-    input:focus, select:focus { border-color: #89b4fa; }
-    .help-text { font-size: 12px; color: #6c7086; }
+    input:focus, select:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,0.12); }
+    .help-text { font-size: 12px; color: #8e8e93; }
     .section-title {
-      font-size: 11px; color: #6c7086; text-transform: uppercase;
-      letter-spacing: 0.08em; flex-shrink: 0; margin-top: 4px;
+      font-size: 12px; color: #8e8e93; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      flex-shrink: 0; margin-top: 4px;
     }
-    .auth-status-row { font-size: 14px; color: #a6adc8; flex-shrink: 0; }
+    .auth-status-row { font-size: 14px; color: #3c3c43; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -220,7 +236,7 @@ $ cat "E:\AI\obsidian-quick-capture\index.html"
       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
     <span class="help-text">
       <a href="https://www.dropbox.com/developers/apps" target="_blank"
-        style="color:#89b4fa">Dropbox App Console</a> で取得したApp Key
+        style="color:#007aff">Dropbox App Console</a> で取得したApp Key
     </span>
   </div>
 
@@ -415,13 +431,21 @@ function disconnect() {
 
 // ---------- Dropbox API ----------
 
+// Dropbox-API-Arg ヘッダーはASCIIのみ使用可能。
+// 日本語などの非ASCII文字を \uXXXX 形式にエスケープする。
+function dbxArg(obj) {
+  return JSON.stringify(obj).replace(/[^\x00-\x7F]/g, c =>
+    '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')
+  );
+}
+
 async function dbxUpload(path, content, mode = 'add') {
   const token = await getAccessToken();
   const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + token,
-      'Dropbox-API-Arg': JSON.stringify({ path, mode, autorename: false }),
+      'Dropbox-API-Arg': dbxArg({ path, mode, autorename: false }),
       'Content-Type': 'application/octet-stream'
     },
     body: new TextEncoder().encode(content)
@@ -438,7 +462,7 @@ async function dbxDownload(path) {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + token,
-      'Dropbox-API-Arg': JSON.stringify({ path })
+      'Dropbox-API-Arg': dbxArg({ path })
     }
   });
   if (resp.status === 409) return null;
