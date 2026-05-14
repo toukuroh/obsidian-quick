@@ -439,18 +439,37 @@ function dbxArg(obj) {
   );
 }
 
-async function dbxUpload(path, content, mode = 'add') {
+async function dbxCreateFolder(path) {
+  const token = await getAccessToken();
+  await fetch('https://api.dropboxapi.com/2/files/create_folder_v2', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ path, autorename: false })
+  });
+  // 既に存在する場合（409）は無視して続行
+}
+
+async function dbxUpload(path, content, mode = 'add', isRetry = false) {
   const token = await getAccessToken();
   const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + token,
-      'Dropbox-API-Arg': dbxArg({ path, mode, autorename: false }),
+      'Dropbox-API-Arg': dbxArg({ path, mode, autorename: true }),
       'Content-Type': 'application/octet-stream'
     },
     body: new TextEncoder().encode(content)
   });
   if (!resp.ok) {
+    if (!isRetry) {
+      // フォルダが存在しない可能性 → 作成して1回だけ再試行
+      const folder = path.substring(0, path.lastIndexOf('/'));
+      await dbxCreateFolder(folder);
+      return dbxUpload(path, content, mode, true);
+    }
     const e = await resp.json().catch(() => ({}));
     throw new Error(e.error_summary || 'アップロード失敗');
   }
@@ -586,9 +605,13 @@ async function saveNote() {
         : existing.replace(/\n$/, '') + '\n- ' + time + ' ' + text + '\n';
       await dbxUpload(path, body, 'overwrite');
     } else {
-      const folder = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
-      const path   = folder + '/' + date + '-' + time.replace(':', '') + '.md';
-      const body   = text + '\n\n---\n*' + date + ' ' + time + '*\n';
+      const folder    = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
+      const dateComp  = date.replace(/-/g, '');   // 20260514
+      const timeComp  = String(now.getHours()).padStart(2,'0')
+                      + String(now.getMinutes()).padStart(2,'0')
+                      + String(now.getSeconds()).padStart(2,'0'); // 115251
+      const path = folder + '/' + dateComp + '-' + timeComp + '.md';
+      const body = text + '\n\n---\n*' + date + ' ' + time + '*\n';
       await dbxUpload(path, body, 'add');
     }
 
