@@ -555,12 +555,8 @@ function initVoice() {
   recognition.onend = () => {
     isListening = false;
     btn.classList.remove('listening');
-    lbl.textContent = '';
-    const text = document.getElementById('memo-input').value.trim();
-    if (text) {
-      // Auto-save after a short moment so user can see the text
-      setTimeout(() => saveNote(), 800);
-    }
+    lbl.textContent = '✓ 確認して保存ボタンを押してください';
+    setTimeout(() => { lbl.textContent = ''; }, 3000);
   };
 
   recognition.onerror = (e) => {
