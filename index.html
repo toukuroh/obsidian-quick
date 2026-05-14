@@ -582,7 +582,6 @@ function toggleVoice() {
     } else {
       initVoice();
     }
-    document.getElementById('memo-input').value = '';
     try { recognition.start(); }
     catch (e) { setStatus('マイク起動失敗: ' + e.message, 'err'); }
   }
