@@ -326,6 +326,13 @@ function fmtTime(d = new Date()) {
   return String(d.getHours()).padStart(2, '0')
     + ':' + String(d.getMinutes()).padStart(2, '0');
 }
+function fmtDateTime(d = new Date()) {
+  return fmtDate(d) + ' ' + fmtTime(d)
+    + ':' + String(d.getSeconds()).padStart(2, '0');
+}
+function frontmatter(datetime) {
+  return '---\ndate: ' + datetime + '\ntags: \n---\n\n';
+}
 
 // ---------- PKCE ----------
 
@@ -604,21 +611,21 @@ async function saveNote() {
     const time = fmtTime(now);
 
     if (mode === 'daily') {
-      const folder = (cfg.dailyPath || '/ObsidianVault/MyVault/Daily').replace(/\/$/, '');
-      const path   = folder + '/' + date + '.md';
+      const folder   = (cfg.dailyPath || '/ObsidianVault/MyVault/Daily').replace(/\/$/, '');
+      const path     = folder + '/' + date + '.md';
       const existing = await dbxDownload(path);
       const body = existing === null
-        ? '# ' + date + '\n\n- ' + time + ' ' + text + '\n'
+        ? frontmatter(fmtDateTime(now)) + '# ' + date + '\n\n- ' + time + ' ' + text + '\n'
         : existing.replace(/\n$/, '') + '\n- ' + time + ' ' + text + '\n';
       await dbxUpload(path, body, 'overwrite');
     } else {
-      const folder    = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
-      const dateComp  = date.replace(/-/g, '');   // 20260514
-      const timeComp  = String(now.getHours()).padStart(2,'0')
-                      + String(now.getMinutes()).padStart(2,'0')
-                      + String(now.getSeconds()).padStart(2,'0'); // 115251
+      const folder   = (cfg.inboxPath || '/ObsidianVault/MyVault/Inbox').replace(/\/$/, '');
+      const dateComp = date.replace(/-/g, '');
+      const timeComp = String(now.getHours()).padStart(2,'0')
+                     + String(now.getMinutes()).padStart(2,'0')
+                     + String(now.getSeconds()).padStart(2,'0');
       const path = folder + '/' + dateComp + '-' + timeComp + '.md';
-      const body = text + '\n\n---\n*' + date + ' ' + time + '*\n';
+      const body = frontmatter(fmtDateTime(now)) + text + '\n';
       await dbxUpload(path, body, 'add');
     }
 
